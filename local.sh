@@ -33,6 +33,14 @@ if is_service_enabled nova; then
     # Get OpenStack user auth
     source $TOP_DIR/openrc
 
+    # Add first keypair found in localhost:$HOME/.ssh
+    for i in $HOME/.ssh/id_rsa.pub $HOME/.ssh/id_dsa.pub; do
+        if [[ -r $i ]]; then
+            openstack keypair create --public-key $i `hostname`
+            break
+        fi
+    done
+
     # Update security default group
     # -----------------------------
 
