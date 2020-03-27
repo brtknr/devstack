@@ -31,37 +31,28 @@ if is_service_enabled nova; then
     # ``demo``)
 
     # Get OpenStack user auth
-    source $TOP_DIR/openrc
+    export OS_CLOUD=devstack
 
     # Add first keypair found in localhost:$HOME/.ssh
-    for i in $HOME/.ssh/id_rsa.pub $HOME/.ssh/id_dsa.pub; do
-        if [[ -r $i ]]; then
-            openstack keypair create --public-key $i `hostname`
-            break
-        fi
-    done
+    keyfile=$HOME/.ssh/id_rsa
+    if [[ ! -r $keyfile.pub ]]; then
+        ssh-keygen -f $keyfile -t rsa -N ''
+    fi
+    openstack keypair create --public-key $keyfile.pub default
 
     # Update security default group
     # -----------------------------
 
     # Add tcp/22 and icmp to default security group
-    default=$(openstack security group list -f value -c ID)
+    default=$(openstack security group show default -f value -c id)
     openstack security group rule create $default --protocol tcp --dst-port 22
     openstack security group rule create $default --protocol icmp
 
-    # Create A Flavor
-    # ---------------
+    # Increase cores quota
+    # ---------------------
 
     # Get OpenStack admin auth
-    source $TOP_DIR/openrc admin admin
+    export OS_CLOUD=devstack-admin
 
-    # Name of new flavor
-    # set in ``local.conf`` with ``DEFAULT_INSTANCE_TYPE=m1.micro``
-    MI_NAME=m1.micro
-
-    # Create micro flavor if not present
-    if [[ -z $(openstack flavor list | grep $MI_NAME) ]]; then
-        openstack flavor create $MI_NAME --id 6 --ram 128 --disk 0 --vcpus 1
-    fi
-
+    openstack quota set --cores 48 demo
 fi
